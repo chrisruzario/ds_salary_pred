@@ -4,7 +4,7 @@ A work-in-progress Python project exploring historical US job listings and prepa
 
 ## Current status — 9 November 2026
 
-Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The latest modelling additions to `run.py` are pending upload; the committed script currently ends at the train/test split.** The fitted model and prediction tables have not been exported. There is no deployed app or API.
+Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The committed `run.py` includes the complete workflow through test error analysis.** The fitted model and prediction tables have not been exported. There is no deployed app or API.
 
 ## Data source and attribution
 
@@ -70,7 +70,7 @@ Place `glassdoor_jobs.csv` alongside `run.py`, then run:
 python run.py
 ```
 
-In Spyder, select the corresponding Python environment and run `run.py`. The script resolves the CSV relative to its own location, prints the analysis and creates `df`, `salary_review`, `train_df` and `test_df` in memory. It does not currently export those tables or train a model.
+In Spyder, select the corresponding Python environment and run `run.py`. The script resolves the CSV relative to its own location, prints the analysis and creates `df`, `salary_review`, `train_df` and `test_df` in memory. It also compares models, tunes Ridge, evaluates the selected pipeline and creates `best_model` and `test_results` in memory. It does not currently export tables or the fitted pipeline.
 
 ## Limitations
 
@@ -119,8 +119,7 @@ These observations suggest limitations in broad title/skill features, but do not
 
 ## Next steps
 
-1. Upload the latest local modelling code to reproduce the results documented above.
-2. Export the fitted preprocessing/model pipeline and prediction tables.
-3. Document environment versions and verify a fresh run.
-4. Assess the salary-review exclusion in a separate sensitivity study without treating the already-inspected test set as new validation data.
-5. Build an interface or API after saving and validating the model.
+1. Export the fitted preprocessing/model pipeline and prediction tables.
+2. Document environment versions and verify a fresh run.
+3. Assess the salary-review exclusion in a separate sensitivity study without treating the already-inspected test set as new validation data.
+4. Build an interface or API after saving and validating the model.
