@@ -2,9 +2,9 @@
 
 A work-in-progress Python project exploring historical US job listings and preparing data for salary estimation. The target is the midpoint of a listed annual salary range in USD, not an employee's actual earnings.
 
-## Current status — 8 November 2026
+## Current status — 9 November 2026
 
-Completed data cleaning, feature engineering, exploratory analysis and a grouped train/test split. **No prediction model has been trained or evaluated yet.** There is no deployed app or API at this stage.
+Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The latest modelling additions to `run.py` are pending upload; the committed script currently ends at the train/test split.** The fitted model and prediction tables have not been exported. There is no deployed app or API.
 
 ## Data source and attribution
 
@@ -79,13 +79,48 @@ In Spyder, select the corresponding Python environment and run `run.py`. The scr
 - Small job-family/seniority groups have unstable summary statistics.
 - Keyword features and title classifications are heuristic; for example, the verb "excel" may produce a false skill match.
 - Grouping prevents exact normalised descriptions crossing the split, but does not prevent all company overlap or near-duplicate text.
-- Exploratory summaries were viewed before the split. The test set is held aside for modelling, but is not an entirely unseen external validation dataset.
+- Exploratory summaries were viewed before the split. The test set was held aside during model fitting and tuning, but is not an entirely unseen external validation dataset.
 - The salary-review exclusion should be revisited with a sensitivity check.
+
+## Modelling results — local run
+
+Inputs: job family, seniority, state and six skill indicators. Salary-derived fields were excluded from predictors. Categorical values were one-hot encoded with unknown categories ignored; skill indicators were standardised inside the preprocessing pipeline.
+
+Five-fold GroupKFold cross-validation used only the 365 training rows, keeping repeated-description groups together. Preprocessing was fitted within each fold.
+
+| Model | Mean cross-validation MAE (USD) |
+|---|---:|
+| Median baseline | 27,111 |
+| Ridge | 18,845 |
+| Random Forest | 19,261 |
+
+Random Forest used 300 trees, a minimum leaf size of 3 and random seed 42. Ridge used the lsqr solver. GridSearchCV compared alpha values 0.1, 1, 10, 100 and 1000; **alpha=1** remained best. The best pipeline was refitted on all training rows before test evaluation.
+
+### Held-out test results
+
+| Metric | Result |
+|---|---:|
+| Test rows | 91 |
+| Baseline MAE | $29,692 |
+| Ridge MAE | $20,943 |
+| Ridge RMSE | $28,599 |
+| Ridge R² | 0.427 |
+| MAE improvement over baseline | 29.5% |
+| Median absolute error | $13,722 |
+| 90th percentile absolute error | $44,396 |
+| Predictions within $10,000 | 35.2% |
+| Predictions within $20,000 | 59.3% |
+| Mean signed error (prediction minus target) | −$7,067 |
+| Shared description groups across train/test | 0 |
+
+The model underpredicted on average. Several expensive or specialised roles had large errors: the Gallup Senior Data Scientist listing had a $237,500 midpoint and an approximately $127,053 prediction. Conversely, the MassMutual Data Science Project Manager listing had a $68,500 midpoint and an approximately $136,303 prediction.
+
+These observations suggest limitations in broad title/skill features, but do not establish the causes of each error. Company identity, industry and detailed experience requirements were not model inputs. MAE is an average error, not a guaranteed prediction interval. This is a learning prototype using historical estimated salary ranges, not a validated salary-negotiation tool. No model changes were selected using the reported test results.
 
 ## Next steps
 
-1. Establish a median-salary baseline using grouped cross-validation within the training set.
-2. Build preprocessing pipelines and compare regression models.
-3. Keep salary-derived fields out of predictor inputs to avoid target leakage.
-4. Evaluate the selected model on the held-out test set and document errors honestly.
-5. Add an interface or API after the modelling workflow is validated.
+1. Upload the latest local modelling code to reproduce the results documented above.
+2. Export the fitted preprocessing/model pipeline and prediction tables.
+3. Document environment versions and verify a fresh run.
+4. Assess the salary-review exclusion in a separate sensitivity study without treating the already-inspected test set as new validation data.
+5. Build an interface or API after saving and validating the model.
