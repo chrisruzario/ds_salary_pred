@@ -406,4 +406,237 @@ test_groups = set(groups.iloc[test_positions])
 
 print("Training rows:", len(train_df))
 print("Test rows:", len(test_df))
+
+from sklearn.dummy import DummyRegressor
+from sklearn.model_selection import GroupKFold, cross_val_score
+
+feature_columns = [
+    "job_family", "seniority", "state",
+    "python", "sql", "excel", "power_bi", "aws", "spark",
+]
+
+X_train = train_df[feature_columns]
+y_train = train_df["salary_midpoint"]
+
+training_groups = groups.iloc[train_positions]
+
+baseline = DummyRegressor(strategy="median")
+cv = GroupKFold(n_splits=5)
+
+scores = cross_val_score(
+    baseline,
+    X_train,
+    y_train,
+    groups=training_groups,
+    cv=cv,
+    scoring="neg_mean_absolute_error",
+)
+
+# Convert negative scores into positive dollar errors
+fold_mae = -scores
+
+print("\nBaseline MAE for each fold:")
+print(fold_mae.round(2))
+
+print(f"\nAverage baseline MAE: ${fold_mae.mean():,.0f}")
+print(f"Training median salary: ${y_train.median():,.0f}")
+
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import Ridge
+
+categorical_features = ["job_family", "seniority", "state"]
+numeric_features = [
+    "python", "sql", "excel", "power_bi", "aws", "spark"
+]
+
+# Convert categories into numeric columns.
+# Fit these transformations separately within each training fold.
+preprocessor = ColumnTransformer(
+    transformers=[
+        (
+            "categories",
+            OneHotEncoder(handle_unknown="ignore"),
+            categorical_features,
+        ),
+        (
+            "skills",
+            StandardScaler(),
+            numeric_features,
+        ),
+    ]
+)
+
+ridge_pipeline = Pipeline([
+    ("preprocessing", preprocessor),
+    ("model", Ridge(alpha=1.0, solver="lsqr")),
+])
+
+ridge_scores = cross_val_score(
+    ridge_pipeline,
+    X_train,
+    y_train,
+    groups=training_groups,
+    cv=cv,
+    scoring="neg_mean_absolute_error",
+)
+
+ridge_mae = -ridge_scores
+baseline_mae = fold_mae.mean()
+
+print("\nRidge MAE for each fold:")
+print(ridge_mae.round(2))
+
+print(f"\nAverage Ridge MAE: ${ridge_mae.mean():,.0f}")
+print(f"Baseline MAE: ${baseline_mae:,.0f}")
+
+improvement = (
+    (baseline_mae - ridge_mae.mean()) / baseline_mae
+) * 100
+
+print(f"Improvement over baseline: {improvement:.1f}%")
+
+from sklearn.base import clone
+from sklearn.ensemble import RandomForestRegressor
+
+forest_pipeline = Pipeline([
+    ("preprocessing", clone(preprocessor)),
+    ("model", RandomForestRegressor(
+        n_estimators=300,
+        min_samples_leaf=3,
+        random_state=42,
+        n_jobs=-1,
+    )),
+])
+
+forest_scores = cross_val_score(
+    forest_pipeline,
+    X_train,
+    y_train,
+    groups=training_groups,
+    cv=cv,
+    scoring="neg_mean_absolute_error",
+)
+
+forest_mae = -forest_scores
+
+print("\nRandom Forest MAE for each fold:")
+print(forest_mae.round(2))
+
+comparison = pd.DataFrame({
+    "Model": ["Median baseline", "Ridge", "Random Forest"],
+    "CV MAE (USD)": [
+        fold_mae.mean(),
+        ridge_mae.mean(),
+        forest_mae.mean(),
+    ],
+}).sort_values("CV MAE (USD)")
+
+print("\nModel comparison — lower MAE is better:")
+print(comparison.to_string(index=False, float_format="%.0f"))
+
+from sklearn.model_selection import GridSearchCV
+
+ridge_search = GridSearchCV(
+    estimator=clone(ridge_pipeline),
+    param_grid={
+        "model__alpha": [0.1, 1, 10, 100, 1000]
+    },
+    scoring="neg_mean_absolute_error",
+    cv=cv,
+    n_jobs=-1,
+    refit=True,
+)
+
+ridge_search.fit(
+    X_train,
+    y_train,
+    groups=training_groups,
+)
+
+tuning_results = pd.DataFrame({
+    "Alpha": ridge_search.cv_results_["param_model__alpha"],
+    "CV MAE (USD)": -ridge_search.cv_results_["mean_test_score"],
+}).sort_values("CV MAE (USD)")
+
+print("\nRidge tuning results:")
+print(tuning_results.to_string(index=False, formatters={"Alpha": "{:g}".format, "CV MAE (USD)": "{:,.0f}".format}))
+
+print("\nBest alpha:", ridge_search.best_params_["model__alpha"])
+print(f"Best CV MAE: ${-ridge_search.best_score_:,.0f}")
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+X_test = test_df[feature_columns]
+y_test = test_df["salary_midpoint"]
+
+# GridSearchCV already fitted this pipeline on all training rows
+best_model = ridge_search.best_estimator_
+test_predictions = best_model.predict(X_test)
+
+# Baseline learns its median only from the training data
+final_baseline = DummyRegressor(strategy="median")
+final_baseline.fit(X_train, y_train)
+baseline_predictions = final_baseline.predict(X_test)
+
+test_mae = mean_absolute_error(y_test, test_predictions)
+baseline_test_mae = mean_absolute_error(y_test, baseline_predictions)
+test_rmse = mean_squared_error(y_test, test_predictions) ** 0.5
+test_r2 = r2_score(y_test, test_predictions)
+
+print("\nHeld-out test results:")
+print("Test rows:", len(y_test))
+print(f"Baseline MAE: ${baseline_test_mae:,.0f}")
+print(f"Ridge MAE: ${test_mae:,.0f}")
+print(f"Ridge RMSE: ${test_rmse:,.0f}")
+print(f"Ridge R²: {test_r2:.3f}")
+
+improvement = (
+    (baseline_test_mae - test_mae) / baseline_test_mae
+) * 100
+
+print(f"Test improvement over baseline: {improvement:.1f}%")
+
+# Compare actual salary midpoints with model predictions
+test_results = test_df[
+    ["Job Title", "company_name_clean", "state", "seniority"]
+].copy()
+
+test_results["actual_salary"] = y_test.to_numpy()
+test_results["predicted_salary"] = test_predictions
+
+# Positive error = overprediction; negative = underprediction
+test_results["error"] = (
+    test_results["predicted_salary"] - test_results["actual_salary"]
+)
+test_results["absolute_error"] = test_results["error"].abs()
+
+print("\nTen largest test errors:")
+print(
+    test_results.nlargest(10, "absolute_error")
+    .to_string(index=False, float_format="%.0f")
+)
+
+
+absolute_errors = test_results["absolute_error"]
+
+print("\nError distribution across all test listings:")
+print(f"Median absolute error: ${absolute_errors.median():,.0f}")
+print(f"90th percentile absolute error: ${absolute_errors.quantile(0.90):,.0f}")
+
+print(
+    "Predictions within $10,000:",
+    f"{absolute_errors.le(10000).mean():.1%}"
+)
+
+print(
+    "Predictions within $20,000:",
+    f"{absolute_errors.le(20000).mean():.1%}"
+)
+
+print(
+    "Mean signed error:",
+    f"${test_results['error'].mean():,.0f}"
+)
 print("Shared description groups:", len(train_groups & test_groups))
