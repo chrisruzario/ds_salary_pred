@@ -639,4 +639,63 @@ print(
     "Mean signed error:",
     f"${test_results['error'].mean():,.0f}"
 )
+
+import json
+import platform
+import joblib
+import numpy as np
+import sklearn
+
+# Save beside your script, inside an outputs folder
+output_dir = Path(__file__).resolve().parent / "outputs"
+output_dir.mkdir(exist_ok=True)
+
+# Save the entire fitted pipeline: preprocessing + Ridge model
+model_path = output_dir / "salary_ridge_pipeline.joblib"
+joblib.dump(best_model, model_path)
+
+# Save predictions and errors
+test_results.to_csv(
+    output_dir / "test_predictions.csv",
+    index=False,
+)
+
+# Record results and versions for reproducibility
+metadata = {
+    "model": "Ridge",
+    "alpha": float(ridge_search.best_params_["model__alpha"]),
+    "features": feature_columns,
+    "target": "Annual listed salary range midpoint in USD",
+    "training_rows": len(X_train),
+    "test_rows": len(X_test),
+    "cv_mae": float(-ridge_search.best_score_),
+    "test_mae": float(test_mae),
+    "test_rmse": float(test_rmse),
+    "test_r2": float(test_r2),
+    "python_version": platform.python_version(),
+    "pandas_version": pd.__version__,
+    "numpy_version": np.__version__,
+    "sklearn_version": sklearn.__version__,
+    "joblib_version": joblib.__version__,
+}
+
+with (output_dir / "model_metadata.json").open(
+    "w", encoding="utf-8"
+) as file:
+    json.dump(metadata, file, indent=2)
+
+# Reload our saved model and verify its predictions
+loaded_model = joblib.load(model_path)
+reloaded_predictions = loaded_model.predict(X_test)
+
+np.testing.assert_allclose(
+    test_predictions,
+    reloaded_predictions,
+    rtol=1e-10,
+    atol=1e-8,
+)
+
+print("\nSaved model, predictions and metadata to:")
+print(output_dir)
+print("Reload check passed: predictions match.")
 print("Shared description groups:", len(train_groups & test_groups))
