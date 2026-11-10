@@ -2,9 +2,9 @@
 
 A work-in-progress Python project exploring historical US job listings and preparing data for salary estimation. The target is the midpoint of a listed annual salary range in USD, not an employee's actual earnings.
 
-## Current status — 9 November 2026
+## Current status — 10 November 2026
 
-Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The committed `run.py` includes the complete workflow through test error analysis.** The fitted model and prediction tables have not been exported. There is no deployed app or API.
+Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The committed `run.py` includes model saving and reload verification, and `predict.py` makes standalone predictions without retraining.** The author successfully generated the outputs locally and confirmed that reloaded predictions match. Generated outputs are not committed; running `run.py` recreates them. There is no deployed app or API.
 
 ## Data source and attribution
 
@@ -70,7 +70,23 @@ Place `glassdoor_jobs.csv` alongside `run.py`, then run:
 python run.py
 ```
 
-In Spyder, select the corresponding Python environment and run `run.py`. The script resolves the CSV relative to its own location, prints the analysis and creates `df`, `salary_review`, `train_df` and `test_df` in memory. It also compares models, tunes Ridge, evaluates the selected pipeline and creates `best_model` and `test_results` in memory. It does not currently export tables or the fitted pipeline.
+In Spyder, select the corresponding Python environment and run `run.py`. The script resolves the CSV relative to its own location, prints the analysis and creates `df`, `salary_review`, `train_df` and `test_df` in memory. It also compares models, tunes Ridge, evaluates the selected pipeline and creates `best_model` and `test_results` in memory. It saves three files under `outputs/`:
+
+| File | Contents |
+|---|---|
+| `salary_ridge_pipeline.joblib` | Fitted preprocessing and Ridge pipeline, trained on the 365 training rows |
+| `test_predictions.csv` | Held-out predictions, actual midpoints and errors |
+| `model_metadata.json` | Model settings, features, metrics and Python/package versions |
+
+The script reloads the saved pipeline and checks that its predictions match using `numpy.testing.assert_allclose`. The reload check passed in the author's local run. Re-running training overwrites these output files.
+
+After running `run.py` once, make a standalone prediction:
+
+```bash
+python predict.py
+```
+
+This loads the local pipeline without retraining. The included hypothetical Senior Data Science role in California (Python, SQL and AWS mentioned) produced **$148,053** in the author's run. This is a historical salary-midpoint estimate, not current salary guidance. Only load trusted joblib files and reuse the recorded package versions when loading an existing model. Dependency ranges in `requirements.txt` are not an exact environment lock.
 
 ## Limitations
 
@@ -119,7 +135,6 @@ These observations suggest limitations in broad title/skill features, but do not
 
 ## Next steps
 
-1. Export the fitted preprocessing/model pipeline and prediction tables.
-2. Document environment versions and verify a fresh run.
-3. Assess the salary-review exclusion in a separate sensitivity study without treating the already-inspected test set as new validation data.
-4. Build an interface or API after saving and validating the model.
+1. Verify the workflow in a fresh environment using the recorded versions.
+2. Assess the salary-review exclusion in a separate sensitivity study without treating the already-inspected test set as new validation data.
+3. Build an interface or API around the saved pipeline.
