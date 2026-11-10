@@ -6,3 +6,4 @@ venv/
 .env
 .spyproject/
 glassdoor_jobs.csv
+outputs/
