@@ -166,6 +166,27 @@ The model underpredicted on average. Several expensive or specialised roles had 
 
 These observations suggest limitations in broad title/skill features, but do not establish the causes of each error. Company identity, industry and detailed experience requirements were not model inputs. MAE is an average error, not a guaranteed prediction interval. This is a learning prototype using historical estimated salary ranges, not a validated salary-negotiation tool. No model changes were selected using the reported test results.
 
+## Results at a glance
+
+![Grouped cross-validation MAE comparison: Ridge 18,845 USD, Random Forest 19,261 USD, median baseline 27,111 USD.](docs/images/model_comparison.png)
+
+Ridge had the lowest recorded mean CV error, but its $416 lead over Random Forest does not establish a statistically reliable advantage.
+
+![Ridge predictions versus listed salary midpoints across 91 held-out test listings.](docs/images/actual_vs_predicted.png)
+
+Points below the diagonal are underpredictions. Several high-salary listings were substantially underpredicted. Recalculating the saved test predictions reproduced MAE **$20,943**, RMSE **$28,599** and R² **0.427**. Listed salary midpoints are estimates, not verified earnings.
+
+### Recreate the charts
+
+Install the plotting dependency in your project environment:
+
+```bash
+python -m pip install matplotlib
+python create_charts.py --predictions outputs/test_predictions.csv
+```
+
+The script reads the locally generated test predictions and writes both PNGs to `docs/images/`. It does not retrain the model. The comparison chart uses the recorded five-fold CV means explicitly stored in the script; these cannot be derived from the test CSV. The test CSV remains excluded from GitHub.
+
 ## Next steps
 
 1. Verify the workflow in a fresh environment using the recorded versions.
