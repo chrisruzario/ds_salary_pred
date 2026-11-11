@@ -6,4 +6,6 @@ venv/
 .env
 .spyproject/
 glassdoor_jobs.csv
-outputs/
+outputs/*
+!outputs/salary_ridge_pipeline.joblib
+!outputs/model_metadata.json

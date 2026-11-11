@@ -4,7 +4,7 @@ A work-in-progress Python project exploring historical US job listings and prepa
 
 ## Current status — 11 November 2026
 
-Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The committed `run.py` includes model saving and reload verification, and `predict.py` makes standalone predictions without retraining.** The author successfully generated the outputs locally and confirmed that reloaded predictions match. Generated outputs are not committed; running `run.py` recreates them. A Streamlit interface now runs locally and loads the saved pipeline without retraining. It has not been deployed publicly.
+Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The committed `run.py` includes model saving and reload verification, and `predict.py` makes standalone predictions without retraining.** The author successfully generated the outputs locally and confirmed that reloaded predictions match. The fitted model and its training metadata are committed for deployment; test predictions remain excluded. Running `run.py` recreates the outputs. A Streamlit interface now runs locally and loads the saved pipeline without retraining. It has not been deployed publicly.
 
 ## Data source and attribution
 
@@ -86,11 +86,11 @@ After running `run.py` once, make a standalone prediction:
 python predict.py
 ```
 
-This loads the local pipeline without retraining. The included hypothetical Senior Data Science role in California (Python, SQL and AWS mentioned) produced **$148,053** in the author's run. This is a historical salary-midpoint estimate, not current salary guidance. Only load trusted joblib files and reuse the recorded package versions when loading an existing model. Dependency ranges in `requirements.txt` are not an exact environment lock.
+This loads the local pipeline without retraining. The included hypothetical Senior Data Science role in California (Python, SQL and AWS mentioned) produced **$148,053** in the author's run. This is a historical salary-midpoint estimate, not current salary guidance. Only load trusted joblib files and reuse the recorded package versions when loading an existing model. Direct dependencies in `requirements.txt` are pinned to the recorded training versions plus Streamlit 1.67.0; transitive dependencies are not fully locked.
 
 ## Browser app
 
-After generating the model with `python run.py`, launch the interface from a terminal in the project folder:
+The repository includes the fitted model, so retraining and the source CSV are not required to launch the interface. From the project folder, run:
 
 ```bash
 python -m streamlit run app.py
@@ -106,7 +106,18 @@ The author checked the following locally with Streamlit 1.67.0:
 
 These are functional checks, not new model-validation results. Unspecified means seniority was not identified in the title; it does not mean junior. The displayed test MAE is the recorded evaluation result, not a confidence interval for an individual prediction.
 
-The app requires `outputs/salary_ridge_pipeline.joblib`, generated locally and excluded from GitHub. Publishing this code does not host a public demo.
+The app loads the committed `outputs/salary_ridge_pipeline.joblib`; its training metadata is in `outputs/model_metadata.json`. Publishing this code does not itself host a public demo.
+
+### Deploy on Streamlit Community Cloud
+
+Sign in at https://share.streamlit.io/ and create an app with:
+
+- Repository: `chrisruzario/ds_salary_pred`
+- Branch: `main`
+- Main file: `app.py`
+- Advanced settings → Python: `3.12`
+
+Deploy and check the default prediction is approximately $148,053. Cloud build and prediction verification are pending. Package versions were taken from the supplied model metadata; the local Windows checks above do not verify Linux hosting compatibility.
 
 ## Limitations
 
@@ -157,4 +168,4 @@ These observations suggest limitations in broad title/skill features, but do not
 
 1. Verify the workflow in a fresh environment using the recorded versions.
 2. Assess the salary-review exclusion in a separate sensitivity study without treating the already-inspected test set as new validation data.
-3. Prepare the local Streamlit demo for reproducible deployment.
+3. Deploy the prepared Streamlit app and verify its predictions online.

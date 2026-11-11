@@ -1,0 +1,27 @@
+{
+  "model": "Ridge",
+  "alpha": 1,
+  "features": [
+    "job_family",
+    "seniority",
+    "state",
+    "python",
+    "sql",
+    "excel",
+    "power_bi",
+    "aws",
+    "spark"
+  ],
+  "target": "Annual listed salary range midpoint in USD",
+  "training_rows": 365,
+  "test_rows": 91,
+  "cv_mae": 18845.12098459612,
+  "test_mae": 20943.073829837635,
+  "test_rmse": 28599.461747323432,
+  "test_r2": 0.42713493568433825,
+  "python_version": "3.12.16",
+  "pandas_version": "3.0.6",
+  "numpy_version": "2.5.4",
+  "sklearn_version": "1.9.1",
+  "joblib_version": "1.6.0"
+}
