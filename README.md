@@ -2,9 +2,9 @@
 
 A work-in-progress Python project exploring historical US job listings and preparing data for salary estimation. The target is the midpoint of a listed annual salary range in USD, not an employee's actual earnings.
 
-## Current status — 10 November 2026
+## Current status — 11 November 2026
 
-Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The committed `run.py` includes model saving and reload verification, and `predict.py` makes standalone predictions without retraining.** The author successfully generated the outputs locally and confirmed that reloaded predictions match. Generated outputs are not committed; running `run.py` recreates them. There is no deployed app or API.
+Completed data preparation, local model comparison, Ridge tuning, held-out evaluation and error analysis. Results below were recorded from the author's local Spyder run. **The committed `run.py` includes model saving and reload verification, and `predict.py` makes standalone predictions without retraining.** The author successfully generated the outputs locally and confirmed that reloaded predictions match. Generated outputs are not committed; running `run.py` recreates them. A Streamlit interface now runs locally and loads the saved pipeline without retraining. It has not been deployed publicly.
 
 ## Data source and attribution
 
@@ -88,6 +88,26 @@ python predict.py
 
 This loads the local pipeline without retraining. The included hypothetical Senior Data Science role in California (Python, SQL and AWS mentioned) produced **$148,053** in the author's run. This is a historical salary-midpoint estimate, not current salary guidance. Only load trusted joblib files and reuse the recorded package versions when loading an existing model. Dependency ranges in `requirements.txt` are not an exact environment lock.
 
+## Browser app
+
+After generating the model with `python run.py`, launch the interface from a terminal in the project folder:
+
+```bash
+python -m streamlit run app.py
+```
+
+Open the local URL printed in the terminal (usually http://localhost:8501) and keep that terminal running. Select a job family, seniority, one of the 12 included state/district codes, and skills mentioned in the listing, then click **Estimate salary**. The app shows the predicted annual salary midpoint, held-out MAE and submitted inputs.
+
+The author checked the following locally with Streamlit 1.67.0:
+
+- Default Senior Data Science role in CA, with Python, SQL and AWS: **$148,053**, matching `predict.py`.
+- Changing only seniority to Unspecified: **$125,071**.
+- Restoring Senior: **$148,053** again.
+
+These are functional checks, not new model-validation results. Unspecified means seniority was not identified in the title; it does not mean junior. The displayed test MAE is the recorded evaluation result, not a confidence interval for an individual prediction.
+
+The app requires `outputs/salary_ridge_pipeline.joblib`, generated locally and excluded from GitHub. Publishing this code does not host a public demo.
+
 ## Limitations
 
 - Historical, non-representative US listings; not current salary guidance or an Irish market dataset.
@@ -137,4 +157,4 @@ These observations suggest limitations in broad title/skill features, but do not
 
 1. Verify the workflow in a fresh environment using the recorded versions.
 2. Assess the salary-review exclusion in a separate sensitivity study without treating the already-inspected test set as new validation data.
-3. Build an interface or API around the saved pipeline.
+3. Prepare the local Streamlit demo for reproducible deployment.
